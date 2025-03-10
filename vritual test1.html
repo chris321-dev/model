@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>MindAR Face Virtual Try-On</title>
+    <style>
+      /* Page centering styles */
+      body {
+        margin: 0;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: #f0f0f0;
+      }
+
+      /* AR card styling */
+      .ar-card {
+        width: 90vmin;
+        height: 90vmin;
+        background: rgb(255, 255, 255, 0);
+        border-radius: 15px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* AR container fills the card */
+      #arContainer {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+    </style>
+
+    <!-- External library imports -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+          "mindar-face-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <!-- Centered AR card container -->
+    <div class="ar-card">
+      <div id="arContainer"></div>
+    </div>
+
+    <script type="module">
+      // Import required libraries
+      import * as THREE from "three";
+      import { MindARThree } from "mindar-face-three";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+      // Initialize AR experience
+      const mindarThree = new MindARThree({
+        container: document.querySelector("#arContainer"),
+      });
+      const { renderer, scene, camera } = mindarThree;
+
+      // Setup scene lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 2);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(0.2, 1, 0.5);
+      scene.add(directionalLight);
+
+      // Load and configure glasses model
+      const anchor = mindarThree.addAnchor(0);
+      const loader = new GLTFLoader();
+      
+      loader.load(
+        "Blue_texture15.glb",
+        (gltf) => {
+          const model = gltf.scene;          
+          model.scale.set(0.18, 0.15, 0.5);
+          model.position.set(0.05, 0.4, 0);
+
+          // Adjust material properties
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.material.metalness = 0;
+              child.material.roughness = 0.2;
+              child.material.color.multiplyScalar(1.2);
+            }
+          });
+
+          anchor.group.add(model);
+        },
+        undefined,
+        (error) => {
+          console.error("❌ Error loading glasses model:", error);
+        }
+      );
+
+      // Start AR experience
+      mindarThree.start().then(() => {
+        // Set initial render size
+        renderer.setSize(
+          document.querySelector('.ar-card').clientWidth,
+          document.querySelector('.ar-card').clientHeight
+        );
+        
+        // Start animation loop
+        renderer.setAnimationLoop(() => {
+          renderer.render(scene, camera);
+        });
+      });
+
+      // Handle window resizing
+      window.addEventListener('resize', () => {
+        const card = document.querySelector('.ar-card');
+        camera.aspect = card.clientWidth / card.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(card.clientWidth, card.clientHeight);
+      });
+    </script>
+  </body>
+</html>
