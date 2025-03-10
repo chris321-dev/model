@@ -141,6 +141,14 @@
         camera.aspect = card.clientWidth / card.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(card.clientWidth, card.clientHeight);
+
+        // Example: Recalculate and update model position if necessary
+        // You could re-run the logic used above to set the position
+        if(window.innerWidth < 600){
+          model.position.set(0, 0.35, 0);
+        } else {
+          model.position.set(0.05, 0.4, 0);
+        }
       });
     </script>
   </body>
