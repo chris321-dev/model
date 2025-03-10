@@ -98,7 +98,16 @@
         (gltf) => {
           const model = gltf.scene;          
           model.scale.set(0.18, 0.15, 0.5);
-          model.position.set(0.05, 0.4, 0);
+
+          // Adjust position based on screen size
+          if (window.innerWidth < 600) {
+            // Example values for smaller screens
+            model.position.set(0, 0.35, 0);
+          } else {
+            // Original values for larger screens
+            model.position.set(0.05, 0.4, 0);
+          }
+          // model.position.set(0.05, 0.4, 0);
           model.traverse((child) => {
             if (child.isMesh) {
               child.material.metalness = 0;
