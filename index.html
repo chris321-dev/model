@@ -4,29 +4,47 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindAR Face Virtual Try-On</title>
+    <!-- External library imports -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+          "mindar-face-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js"
+        }
+      }
+    </script>
     <style>
+      /* Ensure html and body take full height */
       html, body {
         height: 100%;
         margin: 0;
         padding: 0;
       }
+      
+      /* Page centering styles */
       body {
         display: flex;
         justify-content: center;
         align-items: center;
         background: #f0f0f0;
-        /* Use the dynamic viewport height variable */
+        overflow: hidden;
+        /* Use a dynamic viewport height variable to handle mobile UI issues */
         min-height: calc(var(--vh, 1vh) * 100);
       }
+      
+      /* AR card styling */
       .ar-card {
         width: 90vmin;
         height: 90vmin;
-        background: transparent;
+        background: rgba(255, 255, 255, 0);
         border-radius: 15px;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
         overflow: hidden;
         position: relative;
       }
+      
+      /* AR container fills the card */
       #arContainer {
         width: 100%;
         height: 100%;
@@ -42,8 +60,8 @@
       <div id="arContainer"></div>
     </div>
 
+    <!-- Set dynamic viewport height variable for mobile devices -->
     <script>
-      // Update CSS variable --vh based on the real viewport height
       function setVh() {
         let vh = window.innerHeight * 0.01;
         document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -52,31 +70,33 @@
       setVh();
     </script>
 
-    <!-- Your AR JavaScript code goes here -->
     <script type="module">
       import * as THREE from "three";
       import { MindARThree } from "mindar-face-three";
       import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-
+      
+      // Initialize AR experience
       const mindarThree = new MindARThree({
         container: document.querySelector("#arContainer"),
       });
       const { renderer, scene, camera } = mindarThree;
-
-      // Scene lighting
+      
+      // Setup scene lighting
       const ambientLight = new THREE.AmbientLight(0xffffff, 2);
       scene.add(ambientLight);
+      
       const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
       directionalLight.position.set(0.2, 1, 0.5);
       scene.add(directionalLight);
-
-      // Load AR model
+      
+      // Load and configure glasses model
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
+      
       loader.load(
         "Blue_texture15.glb",
         (gltf) => {
-          const model = gltf.scene;
+          const model = gltf.scene;          
           model.scale.set(0.18, 0.15, 0.5);
           model.position.set(0.05, 0.4, 0);
           model.traverse((child) => {
@@ -93,8 +113,10 @@
           console.error("❌ Error loading glasses model:", error);
         }
       );
-
+      
+      // Start AR experience
       mindarThree.start().then(() => {
+        // Set initial render size based on the card dimensions
         renderer.setSize(
           document.querySelector('.ar-card').clientWidth,
           document.querySelector('.ar-card').clientHeight
@@ -103,7 +125,8 @@
           renderer.render(scene, camera);
         });
       });
-
+      
+      // Handle window resizing
       window.addEventListener('resize', () => {
         const card = document.querySelector('.ar-card');
         camera.aspect = card.clientWidth / card.clientHeight;
