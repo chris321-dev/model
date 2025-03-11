@@ -15,7 +15,6 @@
       }
     </script>
     <style>
-      /* Ensure html and body take full height */
       html, body {
         height: 100%;
         margin: 0;
@@ -29,7 +28,7 @@
         align-items: center;
         background: #f0f0f0;
         overflow: hidden;
-        /* Use a dynamic viewport height variable to handle mobile UI issues */
+        /* Use dynamic viewport height to account for mobile toolbars */
         min-height: calc(var(--vh, 1vh) * 100);
       }
       
@@ -59,7 +58,7 @@
     <div class="ar-card">
       <div id="arContainer"></div>
     </div>
-
+    
     <!-- Set dynamic viewport height variable for mobile devices -->
     <script>
       function setVh() {
@@ -69,7 +68,7 @@
       window.addEventListener('resize', setVh);
       setVh();
     </script>
-
+    
     <script type="module">
       import * as THREE from "three";
       import { MindARThree } from "mindar-face-three";
@@ -89,25 +88,48 @@
       directionalLight.position.set(0.2, 1, 0.5);
       scene.add(directionalLight);
       
-      // Load and configure glasses model
+      // Create the AR anchor
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
       
+      // Global variable to store the loaded model for dynamic updates
+      let loadedModel;
+      
+      // Function to update the model's scale based on the current window size
+      function updateModelScale(model) {
+        // Base scales from your original design for a large screen
+        const baseX = 0.18;
+        const baseY = 0.15;
+        const baseZ = 0.5;
+        // Use a factor that reduces the model size on smaller screens
+        const scaleFactor = window.innerWidth < 600 ? 1.3 : 1.0;
+        // Adjust horizontal scale further based on aspect ratio in portrait mode
+        const aspect = window.innerWidth / window.innerHeight;
+        const adjustedX = baseX * scaleFactor * (aspect < 1 ? aspect : 1);
+        
+        model.scale.set(adjustedX, baseY * scaleFactor, baseZ * scaleFactor);
+      }
+      
+      // Function to update the model's position based on screen size
+      function updateModelPosition(model) {
+        if(window.innerWidth < 600){
+          // For smaller screens, adjust position if needed
+          model.position.set(-0.3, 0, 0);
+        } else {
+          // For larger screens, use the original positioning
+          model.position.set(0.05, 0.4, 0);
+        }
+      }
+      
+      // Load and configure the glasses model
       loader.load(
         "Blue_texture15.glb",
         (gltf) => {
-          const model = gltf.scene;          
-          model.scale.set(0.18, 0.15, 0.5);
-
-          // Adjust position based on screen size
-          if (window.innerWidth < 600) {
-            // Example values for smaller screens
-            model.position.set(0, 0.35, 0);
-          } else {
-            // Original values for larger screens
-            model.position.set(0.05, 0.4, 0);
-          }
-          // model.position.set(0.05, 0.4, 0);
+          const model = gltf.scene;
+          updateModelScale(model);
+          updateModelPosition(model);
+          
+          // Adjust material properties
           model.traverse((child) => {
             if (child.isMesh) {
               child.material.metalness = 0;
@@ -115,7 +137,9 @@
               child.material.color.multiplyScalar(1.2);
             }
           });
+          
           anchor.group.add(model);
+          loadedModel = model;
         },
         undefined,
         (error) => {
@@ -123,9 +147,8 @@
         }
       );
       
-      // Start AR experience
+      // Start the AR experience
       mindarThree.start().then(() => {
-        // Set initial render size based on the card dimensions
         renderer.setSize(
           document.querySelector('.ar-card').clientWidth,
           document.querySelector('.ar-card').clientHeight
@@ -135,19 +158,16 @@
         });
       });
       
-      // Handle window resizing
+      // Update renderer and model when window is resized
       window.addEventListener('resize', () => {
         const card = document.querySelector('.ar-card');
         camera.aspect = card.clientWidth / card.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(card.clientWidth, card.clientHeight);
-
-        // Example: Recalculate and update model position if necessary
-        // You could re-run the logic used above to set the position
-        if(window.innerWidth < 600){
-          model.position.set(0, 0.35, 0);
-        } else {
-          model.position.set(0.05, 0.4, 0);
+        
+        if (loadedModel) {
+          updateModelScale(loadedModel);
+          updateModelPosition(loadedModel);
         }
       });
     </script>
