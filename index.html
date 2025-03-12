@@ -102,7 +102,7 @@
         const baseY = 0.15;
         const baseZ = 0.5;
         // Use a factor that reduces the model size on smaller screens
-        const scaleFactor = window.innerWidth < 600 ? 1.3 : 1.0;
+        const scaleFactor = window.innerWidth < 600 ? 1.25 : 1.0;
         // Adjust horizontal scale further based on aspect ratio in portrait mode
         const aspect = window.innerWidth / window.innerHeight;
         const adjustedX = baseX * scaleFactor * (aspect < 1 ? aspect : 1);
@@ -114,7 +114,7 @@
       function updateModelPosition(model) {
         if(window.innerWidth < 600){
           // For smaller screens, adjust position if needed
-          model.position.set(-0.3, 0, 0);
+          model.position.set(-0.2, 0, 0);
         } else {
           // For larger screens, use the original positioning
           model.position.set(0.05, 0.4, 0);
