@@ -41,6 +41,7 @@
         box-shadow: 0 0 20px rgba(0,0,0,0.1);
         overflow: hidden;
         position: relative;
+        display: none; /* Hidden until a model is selected */
       }
       
       /* AR container fills the card */
@@ -51,12 +52,146 @@
         top: 0;
         left: 0;
       }
+      
+      /* Close button inside AR card */
+      #arCloseBtn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 10;
+      }
+      
+      /* Model Selection view styling */
+      #modelSelection {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        overflow-y: auto;
+        padding: 10px;
+        z-index: 100;
+      }
+      .model-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        cursor: pointer;
+        border: 1px solid #ddd;
+        padding: 5px;
+        border-radius: 4px;
+      }
+      .model-item img {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        margin-right: 10px;
+        border-radius: 4px;
+      }
+      
+      /* Adjustment panel styling */
+      #adjustmentPanel {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255,255,255,0.95);
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 10px;
+        display: none;
+        z-index: 110;
+        width: 280px;
+        font-family: sans-serif;
+      }
+      /* Header row inside the panel */
+      #adjustmentPanel .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      #adjustmentPanel .panel-header button {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      #adjustmentPanel > div {
+        margin-bottom: 10px;
+      }
+      #adjustmentPanel button.adjustBtn {
+        margin: 0 5px;
+        padding: 5px 10px;
+        font-size: 16px;
+      }
+      
+      /* Main Adjust button - hidden by default */
+      #adjustBtn {
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        padding: 10px 15px;
+        font-size: 16px;
+        z-index: 110;
+        display: none;
+      }
     </style>
   </head>
   <body>
+    <!-- Model Selection View -->
+    <div id="modelSelection">
+      <h2>Select a Glass Model</h2>
+      <div id="modelList">
+        <!-- Model items will be populated here -->
+      </div>
+    </div>
+    
     <!-- Centered AR card container -->
-    <div class="ar-card">
+    <div class="ar-card" id="arCard">
+      <button id="arCloseBtn" title="Close AR">X</button>
       <div id="arContainer"></div>
+    </div>
+    
+    <!-- Adjust button to toggle the adjustment panel (shown only after model selection) -->
+    <button id="adjustBtn">Adjust</button>
+    
+    <!-- Adjustment panel for manual tuning -->
+    <div id="adjustmentPanel">
+      <div class="panel-header">
+        <strong>Adjustment</strong>
+        <div>
+          <button id="resetBtn" title="Reset">Reset</button>
+          <button id="closeBtn" title="Close">X</button>
+        </div>
+      </div>
+      <!-- Position Adjustment Section -->
+      <div>
+        <strong>Position Adjustment:</strong><br>
+        <label><input type="radio" name="posAxis" id="posAxisX" value="x" checked> Adjust X</label>
+        <label><input type="radio" name="posAxis" id="posAxisY" value="y"> Adjust Y</label><br>
+        <button class="adjustBtn" id="posMinus">-</button>
+        <button class="adjustBtn" id="posPlus">+</button>
+      </div>
+      <!-- Scale Adjustment Section (for X or Y) -->
+      <div>
+        <strong>Scale Adjustment:</strong><br>
+        <label><input type="radio" name="scaleAxis" id="scaleAxisX" value="x" checked> Scale X</label>
+        <label><input type="radio" name="scaleAxis" id="scaleAxisY" value="y"> Scale Y</label><br>
+        <button class="adjustBtn" id="scaleMinus">-</button>
+        <button class="adjustBtn" id="scalePlus">+</button>
+      </div>
     </div>
     
     <!-- Set dynamic viewport height variable for mobile devices -->
@@ -69,105 +204,312 @@
       setVh();
     </script>
     
+    <!-- Model Database -->
+    <script>
+      // This JSON-like data represents our model "database"
+      const modelsData = [
+        {
+          "name": "Black Glasses",
+          "image": "black glasses.png", 
+          "glb": "Black_texture1.glb",
+          "scaleLarge": {"baseX": 0.16, "baseY": 0.14, "baseZ": 0.5},
+          "scaleSmall": {"baseX": 0.16, "baseY": 0.14},  // Optional: can set equal to scaleLarge if desired
+          "positionLarge": {"x": 0.44, "y": 0.4, "z": 0},
+          "positionSmall": {"x": 0, "y": 0, "z": 0}
+        },
+        {
+          "name": "Blue Glasses",
+          "image": "blue glasses.png", 
+          "glb": "Blue_texture15.glb",
+          "scaleLarge": {"baseX": 0.18, "baseY": 0.15, "baseZ": 0.5},
+          "scaleSmall": {"baseX": 0.18, "baseY": 0.15},
+          "positionLarge": {"x": 0.05, "y": 0.4, "z": 0},
+          "positionSmall": {"x": -0.2, "y": 0, "z": 0}
+        },
+        {
+          "name": "Heart-Shaped Glasses",
+          "image": "heart-shaped glasses(1).png", 
+          "glb": "heart-shaped_glasses14.glb",
+          "scaleLarge": {"baseX": 0.25, "baseY": 0.15, "baseZ": 0.5},
+          "scaleSmall": {"baseX": 0.25, "baseY": 0.15},
+          "positionLarge": {"x": 0.15, "y": 0.6, "z": 0},
+          "positionSmall": {"x": -0.2, "y": 0, "z": 0}
+        }
+      ];
+      
+      // Global variable to store the selected model's data
+      let selectedModelData = null;
+    </script>
+    
+    <!-- Main AR and Adjustment Code -->
     <script type="module">
       import * as THREE from "three";
       import { MindARThree } from "mindar-face-three";
       import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
       
-      // Initialize AR experience
-      const mindarThree = new MindARThree({
-        container: document.querySelector("#arContainer"),
-      });
-      const { renderer, scene, camera } = mindarThree;
-      
-      // Setup scene lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 2);
-      scene.add(ambientLight);
-      
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight.position.set(0.2, 1, 0.5);
-      scene.add(directionalLight);
-      
-      // Create the AR anchor
-      const anchor = mindarThree.addAnchor(0);
+      // Global variables for AR experience
+      let mindarThree, renderer, scene, camera, anchor;
+      const arCard = document.getElementById('arCard');
+      const arContainer = document.getElementById('arContainer');
       const loader = new GLTFLoader();
       
       // Global variable to store the loaded model for dynamic updates
       let loadedModel;
       
-      // Function to update the model's scale based on the current window size
+      // Global manual adjustment variables for position and scale
+      let manualPosX = 0;
+      let manualPosY = 0;
+      let manualScaleX = 0;
+      let manualScaleY = 0;
+      
+      // Function to initialize AR (called after a model is selected)
+      function initAR() {
+        mindarThree = new MindARThree({
+          container: arContainer,
+        });
+        ({ renderer, scene, camera } = mindarThree);
+      
+        // Setup scene lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 2);
+        scene.add(ambientLight);
+      
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(0.2, 1, 0.5);
+        scene.add(directionalLight);
+      
+        // Create the AR anchor
+        anchor = mindarThree.addAnchor(0);
+      
+        // Start AR experience
+        mindarThree.start().then(() => {
+          const card = document.querySelector('.ar-card');
+          renderer.setSize(card.clientWidth, card.clientHeight);
+          renderer.setAnimationLoop(() => {
+            renderer.render(scene, camera);
+          });
+        });
+      
+        // Update renderer and model when window is resized
+        window.addEventListener('resize', () => {
+          const card = document.querySelector('.ar-card');
+          camera.aspect = card.clientWidth / card.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(card.clientWidth, card.clientHeight);
+      
+          if (loadedModel) {
+            updateModelScale(loadedModel);
+            updateModelPosition(loadedModel);
+          }
+        });
+      }
+      
+      // Function to update the model's scale using JSON data.
       function updateModelScale(model) {
-        // Base scales from your original design for a large screen
-        const baseX = 0.18;
-        const baseY = 0.15;
-        const baseZ = 0.5;
-        // Use a factor that reduces the model size on smaller screens
+        if (!selectedModelData) return;
+        // For large vs small screens:
         const scaleFactor = window.innerWidth < 600 ? 1.25 : 1.0;
+        // Use JSON data: for small screens, use scaleSmall for X and Y; for large, scaleLarge.
+        const baseX = window.innerWidth < 600 
+                      ? selectedModelData.scaleSmall.baseX 
+                      : selectedModelData.scaleLarge.baseX;
+        const baseY = window.innerWidth < 600 
+                      ? selectedModelData.scaleSmall.baseY 
+                      : selectedModelData.scaleLarge.baseY;
+        const baseZ = selectedModelData.scaleLarge.baseZ; // Z remains constant
+      
         // Adjust horizontal scale further based on aspect ratio in portrait mode
         const aspect = window.innerWidth / window.innerHeight;
         const adjustedX = baseX * scaleFactor * (aspect < 1 ? aspect : 1);
-        
-        model.scale.set(adjustedX, baseY * scaleFactor, baseZ * scaleFactor);
+      
+        // Apply manual scale adjustments for X and Y axes
+        const newScaleX = adjustedX + manualScaleX;
+        const newScaleY = (baseY * scaleFactor) + manualScaleY;
+        model.scale.set(newScaleX, newScaleY, baseZ);
       }
       
-      // Function to update the model's position based on screen size
+      // Function to update the model's position using JSON data.
       function updateModelPosition(model) {
-        if(window.innerWidth < 600){
-          // For smaller screens, adjust position if needed
-          model.position.set(-0.2, 0, 0);
-        } else {
-          // For larger screens, use the original positioning
-          model.position.set(0.05, 0.4, 0);
-        }
+        if (!selectedModelData) return;
+        const pos = window.innerWidth < 600 
+                      ? selectedModelData.positionSmall 
+                      : selectedModelData.positionLarge;
+        // Add manual adjustments
+        model.position.set(pos.x + manualPosX, pos.y + manualPosY, pos.z);
       }
       
-      // Load and configure the glasses model
-      loader.load(
-        "Blue_texture15.glb",
-        (gltf) => {
-          const model = gltf.scene;
-          updateModelScale(model);
-          updateModelPosition(model);
-          
-          // Adjust material properties
-          model.traverse((child) => {
-            if (child.isMesh) {
-              child.material.metalness = 0;
-              child.material.roughness = 0.2;
-              child.material.color.multiplyScalar(1.2);
-            }
-          });
-          
-          anchor.group.add(model);
-          loadedModel = model;
-        },
-        undefined,
-        (error) => {
-          console.error("❌ Error loading glasses model:", error);
+      // Function to load a model given its JSON data
+      function loadModel(modelData) {
+        // Reset manual adjustments
+        manualPosX = 0;
+        manualPosY = 0;
+        manualScaleX = 0;
+        manualScaleY = 0;
+        // Clear previous model if any
+        if (loadedModel && anchor) {
+          anchor.group.remove(loadedModel);
+          loadedModel = null;
         }
-      );
+        loader.load(
+          modelData.glb,
+          (gltf) => {
+            const model = gltf.scene;
+            updateModelScale(model);
+            updateModelPosition(model);
       
-      // Start the AR experience
-      mindarThree.start().then(() => {
-        renderer.setSize(
-          document.querySelector('.ar-card').clientWidth,
-          document.querySelector('.ar-card').clientHeight
+            model.traverse((child) => {
+              if (child.isMesh) {
+                child.material.metalness = 0;
+                child.material.roughness = 0.2;
+                child.material.color.multiplyScalar(1.2);
+              }
+            });
+      
+            anchor.group.add(model);
+            loadedModel = model;
+          },
+          undefined,
+          (error) => {
+            console.error("❌ Error loading model:", error);
+          }
         );
-        renderer.setAnimationLoop(() => {
-          renderer.render(scene, camera);
+      }
+      
+      // Model Selection Logic
+      const modelListDiv = document.getElementById('modelList');
+      const modelSelectionDiv = document.getElementById('modelSelection');
+      // Populate the model list
+      modelsData.forEach((modelData, index) => {
+        const item = document.createElement('div');
+        item.className = 'model-item';
+        item.dataset.index = index;
+      
+        const img = document.createElement('img');
+        img.src = modelData.image;
+        img.alt = modelData.name;
+      
+        const name = document.createElement('span');
+        name.textContent = modelData.name;
+      
+        item.appendChild(img);
+        item.appendChild(name);
+        modelListDiv.appendChild(item);
+      
+        // When a model is clicked:
+        item.addEventListener('click', () => {
+          selectedModelData = modelData;
+          // Hide model selection view and show AR try-on card and adjust button
+          modelSelectionDiv.style.display = 'none';
+          arCard.style.display = 'block';
+          document.getElementById('adjustBtn').style.display = 'block';
+      
+          // Initialize AR if not already done
+          if (!mindarThree) {
+            initAR();
+          }
+          // Load the selected model
+          loadModel(modelData);
         });
       });
       
-      // Update renderer and model when window is resized
-      window.addEventListener('resize', () => {
-        const card = document.querySelector('.ar-card');
-        camera.aspect = card.clientWidth / card.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(card.clientWidth, card.clientHeight);
-        
+      // AR Close button logic: close AR view and show model selection
+      const arCloseBtn = document.getElementById('arCloseBtn');
+      arCloseBtn.addEventListener('click', () => {
+        arCard.style.display = 'none';
+        document.getElementById('adjustBtn').style.display = 'none';
+        // Optionally, stop AR if needed:
+        // mindarThree.stop();
+        modelSelectionDiv.style.display = 'block';
+      });
+      
+      // Adjustment Panel Logic
+      
+      const adjustBtn = document.getElementById('adjustBtn');
+      const adjustmentPanel = document.getElementById('adjustmentPanel');
+      const closeBtn = document.getElementById('closeBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      
+      // Position adjustment buttons
+      const posPlusBtn = document.getElementById('posPlus');
+      const posMinusBtn = document.getElementById('posMinus');
+      // Scale adjustment buttons
+      const scalePlusBtn = document.getElementById('scalePlus');
+      const scaleMinusBtn = document.getElementById('scaleMinus');
+      
+      // Toggle adjustment panel visibility
+      adjustBtn.addEventListener('click', () => {
+        if (adjustmentPanel.style.display === 'none' || adjustmentPanel.style.display === '') {
+          adjustmentPanel.style.display = 'block';
+        } else {
+          adjustmentPanel.style.display = 'none';
+        }
+      });
+      
+      // Close button for the panel
+      closeBtn.addEventListener('click', () => {
+        adjustmentPanel.style.display = 'none';
+      });
+      
+      // Reset button to clear manual adjustments
+      resetBtn.addEventListener('click', () => {
+        manualPosX = 0;
+        manualPosY = 0;
+        manualScaleX = 0;
+        manualScaleY = 0;
+        if (loadedModel) {
+          updateModelPosition(loadedModel);
+          updateModelScale(loadedModel);
+        }
+      });
+      
+      // Position Adjustment: Plus Button
+      posPlusBtn.addEventListener('click', () => {
+        const axisX = document.getElementById('posAxisX').checked;
+        if (axisX) {
+          manualPosX += 0.025;
+        } else {
+          manualPosY += 0.025;
+        }
+        if (loadedModel) {
+          updateModelPosition(loadedModel);
+        }
+      });
+      
+      // Position Adjustment: Minus Button
+      posMinusBtn.addEventListener('click', () => {
+        const axisX = document.getElementById('posAxisX').checked;
+        if (axisX) {
+          manualPosX -= 0.025;
+        } else {
+          manualPosY -= 0.025;
+        }
+        if (loadedModel) {
+          updateModelPosition(loadedModel);
+        }
+      });
+      
+      // Scale Adjustment: Plus Button (adjusts scale on chosen axis)
+      scalePlusBtn.addEventListener('click', () => {
+        const scaleAxisX = document.getElementById('scaleAxisX').checked;
+        if (scaleAxisX) {
+          manualScaleX += 0.01;
+        } else {
+          manualScaleY += 0.01;
+        }
         if (loadedModel) {
           updateModelScale(loadedModel);
-          updateModelPosition(loadedModel);
+        }
+      });
+      
+      // Scale Adjustment: Minus Button (adjusts scale on chosen axis)
+      scaleMinusBtn.addEventListener('click', () => {
+        const scaleAxisX = document.getElementById('scaleAxisX').checked;
+        if (scaleAxisX) {
+          manualScaleX -= 0.01;
+        } else {
+          manualScaleY -= 0.01;
+        }
+        if (loadedModel) {
+          updateModelScale(loadedModel);
         }
       });
     </script>
